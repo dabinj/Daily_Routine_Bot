@@ -1,0 +1,9 @@
+.env
+.telegram.key
+.telegram.chat
+var/
+__pycache__/
+.pytest_cache/
+*.sqlite
+*.sqlite3
+

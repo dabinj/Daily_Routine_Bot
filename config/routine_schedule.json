@@ -1,0 +1,115 @@
+{
+  "labels": {
+    "wake_time": "기상시간",
+    "work_plan": "출근 예정 유무",
+    "commute_time": "출근시간",
+    "lunch_menu": "점심식사 메뉴",
+    "planned_leave_time": "퇴근 예정시간",
+    "leave_confirm": "예정시간 퇴근 여부",
+    "overtime_reason": "연장근무 이유",
+    "dinner": "저녁 식사 시간 / 메뉴",
+    "exercise": "저녁 운동 여부",
+    "alcohol": "음주 여부",
+    "alcohol_amount": "음주량",
+    "tomorrow_wake_time": "내일 기상 예정시간",
+    "bed_time": "취침시간"
+  },
+  "questions": [
+    {
+      "field": "wake_time",
+      "label": "기상시간",
+      "time": "07:00",
+      "weekdays": ["mon", "tue", "wed", "thu", "fri", "sat", "sun"],
+      "message": "오늘 실제 기상시간을 입력해주세요.\n예: 06:40"
+    },
+    {
+      "field": "work_plan",
+      "label": "출근 예정 유무",
+      "time": "07:30",
+      "weekdays": ["mon", "tue", "wed", "thu", "fri"],
+      "message": "오늘 출근 예정인가요?",
+      "options": ["출근", "재택", "휴무", "연차"]
+    },
+    {
+      "field": "commute_time",
+      "label": "출근시간",
+      "time": "08:00",
+      "weekdays": ["mon", "tue", "wed", "thu", "fri"],
+      "message": "출근시간을 입력해주세요.\n예: 08:45"
+    },
+    {
+      "field": "lunch_menu",
+      "label": "점심식사 메뉴",
+      "time": "12:00",
+      "weekdays": ["mon", "tue", "wed", "thu", "fri", "sat", "sun"],
+      "message": "점심식사 메뉴를 기록해주세요."
+    },
+    {
+      "field": "planned_leave_time",
+      "label": "퇴근 예정시간",
+      "time": "14:00",
+      "weekdays": ["mon", "tue", "wed", "thu", "fri"],
+      "message": "오늘 퇴근 예정시간을 입력해주세요.\n예: 18:00"
+    },
+    {
+      "field": "leave_confirm",
+      "label": "예정시간 퇴근 여부",
+      "time": "18:00",
+      "weekdays": ["mon", "tue", "wed", "thu", "fri"],
+      "message": "예정한 시간에 퇴근했나요?",
+      "options": ["예", "아니오"]
+    },
+    {
+      "field": "overtime_reason",
+      "label": "연장근무 이유",
+      "time": "18:30",
+      "weekdays": ["mon", "tue", "wed", "thu", "fri"],
+      "message": "연장근무가 있었다면 이유를 입력해주세요. 없으면 '없음'이라고 입력해주세요."
+    },
+    {
+      "field": "dinner",
+      "label": "저녁 식사 시간 / 메뉴",
+      "time": "19:30",
+      "weekdays": ["mon", "tue", "wed", "thu", "fri", "sat", "sun"],
+      "message": "저녁 식사 시간과 메뉴를 입력해주세요.\n예: 19:20 김치찌개"
+    },
+    {
+      "field": "exercise",
+      "label": "저녁 운동 여부",
+      "time": "21:00",
+      "weekdays": ["mon", "tue", "wed", "thu", "fri", "sat", "sun"],
+      "message": "오늘 저녁 운동을 했나요?",
+      "options": ["예", "아니오"]
+    },
+    {
+      "field": "alcohol",
+      "label": "음주 여부",
+      "time": "21:30",
+      "weekdays": ["mon", "tue", "wed", "thu", "fri", "sat", "sun"],
+      "message": "오늘 음주했나요?",
+      "options": ["예", "아니오"]
+    },
+    {
+      "field": "alcohol_amount",
+      "label": "음주량",
+      "time": "21:35",
+      "weekdays": ["mon", "tue", "wed", "thu", "fri", "sat", "sun"],
+      "message": "음주량을 입력해주세요. 없으면 '없음'이라고 입력해주세요.\n예: 맥주 1캔"
+    },
+    {
+      "field": "tomorrow_wake_time",
+      "label": "내일 기상 예정시간",
+      "time": "22:30",
+      "weekdays": ["mon", "tue", "wed", "thu", "fri", "sat", "sun"],
+      "message": "내일 기상 예정시간을 입력해주세요.\n예: 06:30"
+    },
+    {
+      "field": "bed_time",
+      "label": "취침시간",
+      "time": "23:00",
+      "weekdays": ["mon", "tue", "wed", "thu", "fri", "sat", "sun"],
+      "message": "오늘 취침시간을 입력해주세요.\n예: 23:40"
+    }
+  ]
+}
+

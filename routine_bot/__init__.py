@@ -1,0 +1,2 @@
+"""Daily routine Telegram bot."""
+
