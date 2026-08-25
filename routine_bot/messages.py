@@ -5,20 +5,26 @@ from datetime import datetime
 from typing import Any
 
 
+MENU_COMMANDS = {
+    "오늘 기록": "/today",
+    "최근 7일": "/week",
+    "상태": "/status",
+    "항목 보기": "/fields",
+    "도움말": "/help",
+    "일시 중지": "/pause",
+    "다시 시작": "/resume",
+    "질문 건너뛰기": "/skip",
+    "취소": "/cancel",
+}
+
+
 def help_text() -> str:
     return (
         "Daily Routine Bot\n"
         "━━━━━━━━━━━━━━━━━━━━\n"
-        "/start - 이 대화방 등록\n"
-        "/today - 오늘 기록 조회\n"
-        "/week - 최근 7일 요약\n"
-        "/fields - 기록 항목 보기\n"
-        "/record <항목> <내용> - 수동 기록\n"
-        "/skip - 현재 질문 건너뛰기\n"
-        "/cancel - 현재 질문 취소\n"
-        "/pause - 스케줄 질문 일시 중지\n"
-        "/resume - 스케줄 질문 재개\n"
-        "/status - 봇 상태 확인"
+        "버튼으로 조회와 상태 변경을 할 수 있습니다.\n"
+        "직접 기록: /record <항목> <내용>\n"
+        "예: /record lunch_menu 김치찌개"
     )
 
 
@@ -26,36 +32,77 @@ def question_text(question: dict[str, Any]) -> str:
     lines = [
         "Daily Routine",
         "━━━━━━━━━━━━━━━━━━━━",
+        question.get("label", "루틴 기록"),
+        "",
         question.get("message", question.get("label", "루틴을 입력해주세요.")),
     ]
     options = question.get("options") or []
     if options:
         lines.append("")
-        for index, option in enumerate(options, start=1):
-            lines.append(f"{index}. {option}")
-        lines.append("")
-        lines.append("번호 또는 직접 입력으로 답해주세요.")
+        lines.append("버튼으로 선택하거나 직접 입력해주세요.")
     else:
         lines.append("")
-        lines.append("자유롭게 입력해주세요.")
+        lines.append("직접 입력해주세요.")
     return "\n".join(lines)
+
+
+def command_from_button(text: str) -> str:
+    return MENU_COMMANDS.get(text.strip(), text.strip())
+
+
+def chunked(items: list[str], columns: int) -> list[list[dict[str, str]]]:
+    rows: list[list[dict[str, str]]] = []
+    for index in range(0, len(items), columns):
+        rows.append([{"text": item} for item in items[index : index + columns]])
+    return rows
+
+
+def main_menu_keyboard() -> dict[str, Any]:
+    return {
+        "keyboard": [
+            [{"text": "오늘 기록"}, {"text": "최근 7일"}],
+            [{"text": "상태"}, {"text": "항목 보기"}],
+            [{"text": "일시 중지"}, {"text": "다시 시작"}],
+        ],
+        "resize_keyboard": True,
+        "is_persistent": True,
+    }
 
 
 def question_keyboard(question: dict[str, Any]) -> dict[str, Any] | None:
     options = question.get("options") or []
-    if not options:
-        return None
-    rows = [[{"text": str(option)}] for option in options]
+    columns = int(question.get("keyboard_columns") or 2)
+    rows = chunked([str(option) for option in options], columns) if options else []
+    rows.append([{"text": "질문 건너뛰기"}, {"text": "취소"}])
     return {
         "keyboard": rows,
-        "one_time_keyboard": True,
         "resize_keyboard": True,
-        "is_persistent": False,
+        "one_time_keyboard": False,
+        "is_persistent": True,
     }
 
 
 def remove_keyboard() -> dict[str, Any]:
     return {"remove_keyboard": True}
+
+
+def after_answer_text(question: dict[str, Any], value: str) -> str:
+    rules = question.get("after_answer") or {}
+    if not isinstance(rules, dict):
+        return ""
+    message = rules.get(value) or rules.get("default")
+    return str(message).strip() if message else ""
+
+
+def recorded_text(label: str, value: str, feedback: str = "") -> str:
+    lines = [
+        "기록했습니다.",
+        "━━━━━━━━━━━━━━━━━━━━",
+        f"{label}: {value}",
+    ]
+    if feedback:
+        lines.extend(["", feedback])
+    return "\n".join(lines)
 
 
 def today_text(entry_date: str, entries: list[dict[str, Any]]) -> str:

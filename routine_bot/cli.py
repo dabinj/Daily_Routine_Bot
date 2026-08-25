@@ -9,11 +9,14 @@ from zoneinfo import ZoneInfo
 
 from .config import load_json, load_settings, read_secret, save_json
 from .messages import (
+    after_answer_text,
+    command_from_button,
     fields_text,
     help_text,
+    main_menu_keyboard,
     question_keyboard,
     question_text,
-    remove_keyboard,
+    recorded_text,
     status_text,
     today_text,
     week_text,
@@ -39,74 +42,88 @@ def normalize_answer(question: dict, text: str) -> str:
     return value
 
 
+def skip_pending(token: str, chat_id: int, state: dict, settings) -> bool:
+    pending = state.pop("pending_question", None)
+    if pending:
+        upsert_entry(settings.db_path, today_key(), pending["field"], pending["label"], "skip", "skip", pending.get("asked_at"))
+        send_message(token, chat_id, f"{pending['label']} 질문을 건너뛰었습니다.", main_menu_keyboard())
+        return True
+    send_message(token, chat_id, "대기 중인 질문이 없습니다.", main_menu_keyboard())
+    return False
+
+
+def record_pending_answer(token: str, chat_id: int, state: dict, settings, value: str) -> bool:
+    pending = state.get("pending_question")
+    if not isinstance(pending, dict):
+        send_message(token, chat_id, "대기 중인 질문이 없습니다.", main_menu_keyboard())
+        return False
+
+    upsert_entry(settings.db_path, today_key(), pending["field"], pending["label"], value, "scheduled", pending.get("asked_at"))
+    state.pop("pending_question", None)
+    feedback = after_answer_text(pending, value)
+    send_message(token, chat_id, recorded_text(pending["label"], value, feedback), main_menu_keyboard())
+    return True
+
+
 def handle_message(token: str, chat_id: int, text: str, state: dict, schedule: dict) -> bool:
     settings = load_settings()
-    command = text.strip()
+    command = command_from_button(text)
 
     if command == "/start":
         settings.telegram_chat_path.write_text(str(chat_id) + "\n", encoding="utf-8")
-        send_message(token, chat_id, "Daily Routine Bot 등록이 완료되었습니다.\n\n" + help_text())
+        send_message(token, chat_id, "Daily Routine Bot 등록이 완료되었습니다.\n\n" + help_text(), main_menu_keyboard())
         return True
 
     if command == "/help":
-        send_message(token, chat_id, help_text())
+        send_message(token, chat_id, help_text(), main_menu_keyboard())
         return False
 
     if command == "/pause":
         state["paused"] = True
-        send_message(token, chat_id, "스케줄 질문을 일시 중지했습니다. 다시 켜려면 /resume")
+        send_message(token, chat_id, "자동 질문을 일시 중지했습니다.", main_menu_keyboard())
         return True
 
     if command == "/resume":
         state["paused"] = False
-        send_message(token, chat_id, "스케줄 질문을 재개했습니다.")
+        send_message(token, chat_id, "자동 질문을 다시 시작했습니다.", main_menu_keyboard())
         return True
 
     if command == "/status":
-        send_message(token, chat_id, status_text(state))
+        send_message(token, chat_id, status_text(state), main_menu_keyboard())
         return False
 
     if command == "/fields":
-        send_message(token, chat_id, fields_text(schedule))
+        send_message(token, chat_id, fields_text(schedule), main_menu_keyboard())
         return False
 
     if command == "/today":
-        send_message(token, chat_id, today_text(today_key(), get_day_entries(settings.db_path, today_key())))
+        send_message(token, chat_id, today_text(today_key(), get_day_entries(settings.db_path, today_key())), main_menu_keyboard())
         return False
 
     if command == "/week":
-        send_message(token, chat_id, week_text(get_recent_entries(settings.db_path, 7, today_key())))
+        send_message(token, chat_id, week_text(get_recent_entries(settings.db_path, 7, today_key())), main_menu_keyboard())
         return False
 
     if command in {"/skip", "/cancel", "/cancle"}:
-        pending = state.pop("pending_question", None)
-        if pending:
-            upsert_entry(settings.db_path, today_key(), pending["field"], pending["label"], "skip", "skip", pending.get("asked_at"))
-            send_message(token, chat_id, f"{pending['label']} 질문을 건너뛰었습니다.", remove_keyboard())
-            return True
-        send_message(token, chat_id, "대기 중인 질문이 없습니다.")
-        return False
+        return skip_pending(token, chat_id, state, settings)
 
     if command.startswith("/record "):
         parts = command.split(maxsplit=2)
         if len(parts) < 3:
-            send_message(token, chat_id, "사용법: /record <항목> <내용>")
+            send_message(token, chat_id, "사용법: /record <항목> <내용>", main_menu_keyboard())
             return False
         field = parts[1]
         label = schedule.get("labels", {}).get(field, field)
         upsert_entry(settings.db_path, today_key(), field, label, parts[2], "manual")
-        send_message(token, chat_id, f"기록했습니다.\n{label}: {parts[2]}")
+        send_message(token, chat_id, recorded_text(label, parts[2]), main_menu_keyboard())
         return True
 
     pending = state.get("pending_question")
     if isinstance(pending, dict):
-        value = normalize_answer(pending, text)
-        upsert_entry(settings.db_path, today_key(), pending["field"], pending["label"], value, "scheduled", pending.get("asked_at"))
-        state.pop("pending_question", None)
-        send_message(token, chat_id, f"기록했습니다.\n{pending['label']}: {value}", remove_keyboard())
-        return True
+        value = normalize_answer(pending, command)
+        return record_pending_answer(token, chat_id, state, settings, value)
 
-    send_message(token, chat_id, "알 수 없는 입력입니다. /help")
+    send_message(token, chat_id, "메뉴 버튼을 사용하거나 /help를 입력해주세요.", main_menu_keyboard())
     return False
 
 
@@ -123,6 +140,7 @@ def send_due_questions(token: str, chat_id: int, state: dict, schedule: dict) ->
         "field": question["field"],
         "label": question["label"],
         "options": question.get("options", []),
+        "after_answer": question.get("after_answer", {}),
         "asked_at": now.isoformat(),
     }
     mark_sent(state, question, now)
@@ -182,11 +200,42 @@ def command_help_text(_args: argparse.Namespace) -> int:
     return 0
 
 
+def command_setup_ui(_args: argparse.Namespace) -> int:
+    settings = load_settings()
+    token = read_secret(settings.telegram_key_path)
+    commands = [
+        {"command": "today", "description": "오늘 기록 조회"},
+        {"command": "week", "description": "최근 7일 요약"},
+        {"command": "fields", "description": "기록 항목 보기"},
+        {"command": "status", "description": "봇 상태 확인"},
+        {"command": "pause", "description": "자동 질문 일시 중지"},
+        {"command": "resume", "description": "자동 질문 재개"},
+        {"command": "skip", "description": "현재 질문 건너뛰기"},
+        {"command": "help", "description": "도움말"},
+    ]
+    result = telegram_call(token, "setMyCommands", {"commands": json.dumps(commands, ensure_ascii=False)})
+    if not result.get("ok"):
+        raise RuntimeError(result.get("description", "setMyCommands failed"))
+    print("telegram_commands=ok")
+    return 0
+
+
+def command_send_menu(_args: argparse.Namespace) -> int:
+    settings = load_settings()
+    token = read_secret(settings.telegram_key_path)
+    chat_id = int(read_secret(settings.telegram_chat_path))
+    send_message(token, chat_id, "메뉴를 열었습니다.", main_menu_keyboard())
+    print("menu_sent=ok")
+    return 0
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(prog="routine-bot")
     sub = parser.add_subparsers(dest="command", required=True)
     sub.add_parser("init-db").set_defaults(func=command_init_db)
     sub.add_parser("help-text").set_defaults(func=command_help_text)
+    sub.add_parser("setup-ui").set_defaults(func=command_setup_ui)
+    sub.add_parser("send-menu").set_defaults(func=command_send_menu)
     poll = sub.add_parser("poll")
     poll.add_argument("--timeout", type=int, default=25)
     poll.add_argument("--sleep", type=float, default=2.0)
