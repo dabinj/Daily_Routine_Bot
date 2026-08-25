@@ -8,7 +8,16 @@ from datetime import datetime
 from zoneinfo import ZoneInfo
 
 from .config import load_json, load_settings, read_secret, save_json
-from .messages import help_text, question_text, status_text, today_text, week_text
+from .messages import (
+    fields_text,
+    help_text,
+    question_keyboard,
+    question_text,
+    remove_keyboard,
+    status_text,
+    today_text,
+    week_text,
+)
 from .schedule import due_questions, mark_sent
 from .storage import get_day_entries, get_recent_entries, init_db, upsert_entry
 from .telegram import send_message, telegram_call
@@ -36,7 +45,7 @@ def handle_message(token: str, chat_id: int, text: str, state: dict, schedule: d
 
     if command == "/start":
         settings.telegram_chat_path.write_text(str(chat_id) + "\n", encoding="utf-8")
-        send_message(token, chat_id, "Daily Routine Bot을 시작합니다.\n\n" + help_text())
+        send_message(token, chat_id, "Daily Routine Bot 등록이 완료되었습니다.\n\n" + help_text())
         return True
 
     if command == "/help":
@@ -57,19 +66,23 @@ def handle_message(token: str, chat_id: int, text: str, state: dict, schedule: d
         send_message(token, chat_id, status_text(state))
         return False
 
+    if command == "/fields":
+        send_message(token, chat_id, fields_text(schedule))
+        return False
+
     if command == "/today":
         send_message(token, chat_id, today_text(today_key(), get_day_entries(settings.db_path, today_key())))
         return False
 
     if command == "/week":
-        send_message(token, chat_id, week_text(get_recent_entries(settings.db_path, 7)))
+        send_message(token, chat_id, week_text(get_recent_entries(settings.db_path, 7, today_key())))
         return False
 
-    if command == "/skip":
+    if command in {"/skip", "/cancel", "/cancle"}:
         pending = state.pop("pending_question", None)
         if pending:
             upsert_entry(settings.db_path, today_key(), pending["field"], pending["label"], "skip", "skip", pending.get("asked_at"))
-            send_message(token, chat_id, f"{pending['label']} 질문을 건너뛰었습니다.")
+            send_message(token, chat_id, f"{pending['label']} 질문을 건너뛰었습니다.", remove_keyboard())
             return True
         send_message(token, chat_id, "대기 중인 질문이 없습니다.")
         return False
@@ -90,7 +103,7 @@ def handle_message(token: str, chat_id: int, text: str, state: dict, schedule: d
         value = normalize_answer(pending, text)
         upsert_entry(settings.db_path, today_key(), pending["field"], pending["label"], value, "scheduled", pending.get("asked_at"))
         state.pop("pending_question", None)
-        send_message(token, chat_id, f"기록했습니다.\n{pending['label']}: {value}")
+        send_message(token, chat_id, f"기록했습니다.\n{pending['label']}: {value}", remove_keyboard())
         return True
 
     send_message(token, chat_id, "알 수 없는 입력입니다. /help")
@@ -98,8 +111,10 @@ def handle_message(token: str, chat_id: int, text: str, state: dict, schedule: d
 
 
 def send_due_questions(token: str, chat_id: int, state: dict, schedule: dict) -> bool:
+    settings = load_settings()
     now = datetime.now(KST)
-    questions = due_questions(schedule, state, now)
+    entries = get_day_entries(settings.db_path, today_key())
+    questions = due_questions(schedule, state, now, entries)
     if not questions or state.get("pending_question"):
         return False
 
@@ -111,7 +126,7 @@ def send_due_questions(token: str, chat_id: int, state: dict, schedule: dict) ->
         "asked_at": now.isoformat(),
     }
     mark_sent(state, question, now)
-    send_message(token, chat_id, question_text(question))
+    send_message(token, chat_id, question_text(question), question_keyboard(question))
     return True
 
 
@@ -186,4 +201,3 @@ def main(argv: list[str] | None = None) -> int:
 
 if __name__ == "__main__":
     raise SystemExit(main())
-

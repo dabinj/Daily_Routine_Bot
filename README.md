@@ -9,7 +9,10 @@ Daily Routine Bot은 Telegram을 통해 하루 루틴을 정해진 시간에 질
 - 요일 기반 루틴 질문 스케줄
 - 정해진 시간에 Telegram으로 자동 질문 발송
 - 선택형 답변과 자유 입력형 답변 저장
+- 선택형 질문의 Telegram reply keyboard 지원
 - 질문 대기 상태 관리
+- 출근/퇴근/음주 상태에 따른 조건부 질문
+- 퇴근 예정시간 입력값 기준 동적 퇴근 확인
 - `/skip`으로 현재 질문 건너뛰기
 - `/pause`, `/resume`으로 자동 질문 일시 중지/재개
 - SQLite 기반 일별 루틴 기록 저장
@@ -46,8 +49,10 @@ Daily Routine Bot은 Telegram을 통해 하루 루틴을 정해진 시간에 질
 | `/help` | 사용 가능한 명령어 표시 |
 | `/today` | 오늘 루틴 기록 조회 |
 | `/week` | 최근 7일 루틴 요약 |
+| `/fields` | 수동 기록 가능한 항목 표시 |
 | `/record <항목> <내용>` | 특정 항목을 수동으로 기록 |
 | `/skip` | 현재 대기 중인 질문 건너뛰기 |
+| `/cancel` | 현재 대기 중인 질문 취소 |
 | `/pause` | 정해진 시간의 자동 질문 일시 중지 |
 | `/resume` | 자동 질문 재개 |
 | `/status` | 봇 상태와 대기 질문 확인 |
@@ -65,7 +70,7 @@ Daily Routine Bot은 Telegram을 통해 하루 루틴을 정해진 시간에 질
 
 봇은 설정된 시간마다 아직 발송하지 않은 질문이 있는지 확인합니다. 질문이 발송되면 해당 질문은 pending 상태가 되고, 사용자의 다음 일반 메시지를 답변으로 저장합니다.
 
-선택형 질문은 번호 입력을 지원합니다.
+선택형 질문은 Telegram reply keyboard와 번호 입력을 모두 지원합니다.
 
 ```text
 출근 예정이신가요?
@@ -75,7 +80,19 @@ Daily Routine Bot은 Telegram을 통해 하루 루틴을 정해진 시간에 질
 4. 연차
 ```
 
-사용자가 `1`을 입력하면 `출근`으로 저장됩니다. 번호 대신 직접 텍스트를 입력해도 기록됩니다.
+사용자가 `1`을 입력하거나 Telegram 버튼에서 `출근`을 선택하면 `출근`으로 저장됩니다. 번호 대신 직접 텍스트를 입력해도 기록됩니다.
+
+## 조건부 질문
+
+현재 스케줄은 선행 답변에 따라 다음 질문을 자동으로 생략합니다.
+
+| 조건 | 동작 |
+| --- | --- |
+| 출근 예정 유무가 `출근`이 아님 | 출근시간, 퇴근 예정시간, 퇴근 확인, 연장근무 이유 질문 생략 |
+| 퇴근 확인이 `예` | 연장근무 이유 질문 생략 |
+| 음주 여부가 `아니오` | 음주량 질문 생략 |
+
+퇴근 확인 질문은 고정 18:00이 아니라 사용자가 입력한 퇴근 예정시간을 기준으로 발송합니다. 예를 들어 `18:00`, `18시`, `오후 6시`, `6시` 입력을 지원합니다.
 
 ## 저장 구조
 
@@ -83,6 +100,7 @@ Daily Routine Bot은 Telegram을 통해 하루 루틴을 정해진 시간에 질
 Daily_Routine_Bot/
 ├── config/
 │   ├── development_plan.md
+│   ├── feature_design.md
 │   ├── oracle_deploy.md
 │   └── routine_schedule.json
 ├── routine_bot/
@@ -174,6 +192,9 @@ sudo journalctl -u daily-routine-bot.service -n 100 --no-pager
 - Telegram bot token 검증
 - `/start` 기반 대화방 등록
 - 스케줄 기반 질문 발송
+- 조건부 질문 발송
+- 퇴근 예정시간 기준 동적 질문
+- 선택형 질문 reply keyboard
 - 답변 기록
 - 오늘/최근 7일 조회
 - 일시 중지/재개
@@ -182,9 +203,5 @@ sudo journalctl -u daily-routine-bot.service -n 100 --no-pager
 
 ## 다음 개선 후보
 
-- 퇴근 예정시간 입력값을 기준으로 퇴근 여부 확인 질문 동적 예약
-- 출근하지 않는 날에는 출근/퇴근 관련 질문 자동 생략
-- 음주하지 않은 날에는 음주량 질문 자동 생략
-- Telegram inline keyboard 또는 reply keyboard 적용
 - 주간/월간 통계 리포트
 - CSV 백업 또는 Google Sheets 연동

@@ -26,8 +26,10 @@ def telegram_call(token: str, method: str, params: dict[str, Any] | None = None,
     return http_json(f"https://api.telegram.org/bot{token}/{method}", params=params, timeout=timeout)
 
 
-def send_message(token: str, chat_id: int, text: str) -> None:
-    result = telegram_call(token, "sendMessage", {"chat_id": str(chat_id), "text": text})
+def send_message(token: str, chat_id: int, text: str, reply_markup: dict[str, Any] | None = None) -> None:
+    params: dict[str, Any] = {"chat_id": str(chat_id), "text": text}
+    if reply_markup is not None:
+        params["reply_markup"] = json.dumps(reply_markup, ensure_ascii=False)
+    result = telegram_call(token, "sendMessage", params)
     if not result.get("ok"):
         raise RuntimeError(result.get("description", "sendMessage failed"))
-

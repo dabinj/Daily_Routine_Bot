@@ -35,7 +35,10 @@
       "label": "출근시간",
       "time": "08:00",
       "weekdays": ["mon", "tue", "wed", "thu", "fri"],
-      "message": "출근시간을 입력해주세요.\n예: 08:45"
+      "message": "출근시간을 입력해주세요.\n예: 08:45",
+      "requires": [
+        {"field": "work_plan", "in": ["출근"]}
+      ]
     },
     {
       "field": "lunch_menu",
@@ -49,22 +52,34 @@
       "label": "퇴근 예정시간",
       "time": "14:00",
       "weekdays": ["mon", "tue", "wed", "thu", "fri"],
-      "message": "오늘 퇴근 예정시간을 입력해주세요.\n예: 18:00"
+      "message": "오늘 퇴근 예정시간을 입력해주세요.\n예: 18:00",
+      "requires": [
+        {"field": "work_plan", "in": ["출근"]}
+      ]
     },
     {
       "field": "leave_confirm",
       "label": "예정시간 퇴근 여부",
-      "time": "18:00",
       "weekdays": ["mon", "tue", "wed", "thu", "fri"],
       "message": "예정한 시간에 퇴근했나요?",
-      "options": ["예", "아니오"]
+      "options": ["예", "아니오"],
+      "dynamic_time_from": "planned_leave_time",
+      "dynamic_time_preference": "evening",
+      "requires": [
+        {"field": "work_plan", "in": ["출근"]},
+        {"field": "planned_leave_time", "exists": true}
+      ]
     },
     {
       "field": "overtime_reason",
       "label": "연장근무 이유",
       "time": "18:30",
       "weekdays": ["mon", "tue", "wed", "thu", "fri"],
-      "message": "연장근무가 있었다면 이유를 입력해주세요. 없으면 '없음'이라고 입력해주세요."
+      "message": "연장근무 이유를 입력해주세요.",
+      "requires": [
+        {"field": "work_plan", "in": ["출근"]},
+        {"field": "leave_confirm", "in": ["아니오"]}
+      ]
     },
     {
       "field": "dinner",
@@ -94,7 +109,10 @@
       "label": "음주량",
       "time": "21:35",
       "weekdays": ["mon", "tue", "wed", "thu", "fri", "sat", "sun"],
-      "message": "음주량을 입력해주세요. 없으면 '없음'이라고 입력해주세요.\n예: 맥주 1캔"
+      "message": "음주량을 입력해주세요.\n예: 맥주 1캔",
+      "requires": [
+        {"field": "alcohol", "in": ["예"]}
+      ]
     },
     {
       "field": "tomorrow_wake_time",
@@ -112,4 +130,3 @@
     }
   ]
 }
-

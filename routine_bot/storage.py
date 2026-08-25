@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import sqlite3
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any
 
@@ -76,16 +76,31 @@ def get_day_entries(db_path: Path, entry_date: str) -> list[dict[str, Any]]:
     return [dict(row) for row in rows]
 
 
-def get_recent_entries(db_path: Path, days: int = 7) -> list[dict[str, Any]]:
+def get_recent_entries(db_path: Path, days: int = 7, today: str | None = None) -> list[dict[str, Any]]:
+    if today:
+        cutoff = (datetime.fromisoformat(today) - timedelta(days=days - 1)).date().isoformat()
+    else:
+        cutoff = f"-{days - 1} day"
+
     with connect(db_path) as conn:
-        rows = conn.execute(
+        if today:
+            query = """
+            SELECT entry_date, field, label, value, source, asked_at, answered_at
+            FROM routine_entries
+            WHERE entry_date >= ?
+            ORDER BY entry_date DESC, id
             """
+            params = (cutoff,)
+        else:
+            query = """
             SELECT entry_date, field, label, value, source, asked_at, answered_at
             FROM routine_entries
             WHERE entry_date >= date('now', ?)
             ORDER BY entry_date DESC, id
-            """,
-            (f"-{days - 1} day",),
+            """
+            params = (cutoff,)
+        rows = conn.execute(
+            query,
+            params,
         ).fetchall()
     return [dict(row) for row in rows]
-
